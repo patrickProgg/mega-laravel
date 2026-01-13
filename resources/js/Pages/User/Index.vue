@@ -38,15 +38,11 @@ watch(search, () => {
 });
 
 function fetchUsers(pageNumber = currentPage.value) {
-    currentPage.value = pageNumber;
+    currentPage.value = pageNumber; // make sure this updates
     router.get(
         "/user",
-        { search: search.value },
-        {
-            preserveState: false, // keep previous state
-            preserveScroll: true, // ✅ prevent scroll jump
-            replace: true, // update URL without adding history
-        }
+        { perPage: perPage.value, page: pageNumber, search: search.value },
+        { preserveState: false, preserveScroll: true, replace: true }
     );
 }
 
@@ -115,7 +111,7 @@ const dataSource = computed(() =>
 );
 
 const columns = [
-    { title: "ID", dataIndex: "hd_id", key: "hd_id" },
+    { title: "ID#", dataIndex: "hd_id", key: "hd_id" },
     { title: "Full Name", dataIndex: "full_name", key: "full_name" },
     { title: "Email", dataIndex: "email", key: "email" },
     { title: "Address", dataIndex: "address", key: "address" },
@@ -152,12 +148,12 @@ const columns = [
         title: "Action",
         key: "action",
         customRender: ({ record }) => {
-            return h("div", { class: "flex" }, [
+            return h("div", { class: "flex space-x-2" }, [
                 // Edit button with pencil icon
                 h(
                     "button",
                     {
-                        class: "p-2 text-yellow-500 hover:text-yellow-700 rounded",
+                        class: "text-yellow-500 hover:text-yellow-700 rounded",
                         onClick: () => openEditModal(record),
                         title: "Edit",
                     },
@@ -188,7 +184,7 @@ const columns = [
                 h(
                     "button",
                     {
-                        class: "p-2 text-blue-500 hover:text-blue-700 rounded",
+                        class: "text-blue-500 hover:text-blue-700 rounded",
                         onClick: () => viewUser(record), // replace deleteUser with viewUser
                         title: "View",
                     },
@@ -217,7 +213,7 @@ const columns = [
                 h(
                     "button",
                     {
-                        class: "p-2 text-blue-500 hover:text-blue-700 rounded",
+                        class: "text-blue-500 hover:text-blue-700 rounded",
                         onClick: () => sendUser(record),
                         title: "Send",
                     },
@@ -248,9 +244,9 @@ const pagination = computed(() => ({
     pageSize: perPage.value,
     total: users.value.total || 0,
     showSizeChanger: true,
-    pageSizeOptions: ["10", "25", "50", "100"],
+    pageSizeOptions: [10, 25, 50, 100],
     onChange: (page, pageSizeValue) => {
-        perPage.value = pageSizeValue;
+        perPage.value = Number(pageSizeValue);
         fetchUsers(page);
     },
 }));

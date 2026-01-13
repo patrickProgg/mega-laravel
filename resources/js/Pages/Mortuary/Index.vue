@@ -1,13 +1,13 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { ref, watch } from "vue";
+import { ref, watch, computed, h } from "vue";
 import { Head, usePage, router } from "@inertiajs/vue3";
 
 const page = usePage();
 
 // reactive references
 const deceased = ref(page.props.deceased);
-const perPage = ref(page.props.perPage || 10);
+const perPage = ref(Number(page.props.perPage) || 10);
 const search = ref(page.props.search || "");
 const currentPage = ref(deceased.value.current_page || 1);
 
@@ -37,20 +37,132 @@ function fetchUsers(pageNumber = currentPage.value) {
     );
 }
 
-function goToPage(link) {
-    if (!link) return;
+const dataSource = computed(() =>
+    deceased.value.data.map((dec) => ({
+        ...dec,
+        key: dec.dd_id,
+    }))
+);
 
-    // If the link is an object with a `url` property (from deceased.links)
-    const urlString = typeof link === "object" ? link.url : link;
-    if (!urlString) return;
+const columns = [
+    { title: "ID#", dataIndex: "hd_id", key: "hd_id" },
+    { title: "Full Name", dataIndex: "full_name", key: "full_name" },
+    { title: "Address", dataIndex: "address", key: "address" },
+    { title: "Passing Date", dataIndex: "dd_date_died", key: "dd_date_died" },
+    // { title: "Phone", dataIndex: "phone1", key: "phone1" },
+    { title: "Amount", dataIndex: "dd_total_amt", key: "dd_total_amt" },
+    { title: "Ledger", dataIndex: "dd_amt_rcv", key: "dd_amt_rcv" },
+    {
+        title: "Status",
+        dataIndex: "dd_status",
+        key: "status",
+        customRender: ({ text }) => {
+            let label = "";
+            let colorClass = "";
 
-    // Extract page number from URL
-    const url = new URL(urlString, window.location.origin);
-    const pageNumber = Number(url.searchParams.get("page") || 1);
+            if (text === 0) {
+                label = "Pending";
+                colorClass = "bg-red-100 text-red-700";
+            } else if (text === 1) {
+                label = "Partial";
+                colorClass = "bg-blue-100 text-blue-700";
+            } else if (text === 2) {
+                label = "Settled";
+                colorClass = "bg-green-100 text-green-700";
+            }
 
-    currentPage.value = pageNumber;
-    fetchUsers(pageNumber);
-}
+            return h(
+                "span",
+                {
+                    class: `inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${colorClass}`,
+                },
+                label
+            );
+        },
+    },
+    {
+        title: "Action",
+        key: "action",
+        customRender: ({ record }) => {
+            return h("div", { class: "flex space-x-2" }, [
+                // Edit button with pencil icon
+                h(
+                    "button",
+                    {
+                        class: "text-yellow-500 hover:text-yellow-700 rounded",
+                        onClick: () => openEditModal(record),
+                        title: "Edit",
+                    },
+                    [
+                        h(
+                            "svg",
+                            {
+                                xmlns: "http://www.w3.org/2000/svg",
+                                class: "h-5 w-5",
+                                fill: "none",
+                                viewBox: "0 0 24 24",
+                                stroke: "currentColor",
+                            },
+                            [
+                                h("path", {
+                                    "stroke-linecap": "round",
+                                    "stroke-linejoin": "round",
+                                    "stroke-width": 2,
+                                    d:
+                                        "M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z",
+                                }),
+                            ]
+                        ),
+                    ]
+                ),
+
+                // Delete button with trash icon
+                h(
+                    "button",
+                    {
+                        class: "text-blue-500 hover:text-blue-700 rounded",
+                        onClick: () => viewUser(record), // replace deleteUser with viewUser
+                        title: "View",
+                    },
+                    [
+                        h(
+                            "svg",
+                            {
+                                xmlns: "http://www.w3.org/2000/svg",
+                                class: "h-5 w-5",
+                                fill: "none",
+                                viewBox: "0 0 24 24",
+                                stroke: "currentColor",
+                            },
+                            [
+                                h("path", {
+                                    "stroke-linecap": "round",
+                                    "stroke-linejoin": "round",
+                                    "stroke-width": 2,
+                                    d:
+                                        "M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z",
+                                }),
+                            ]
+                        ),
+                    ]
+                ),
+            ]);
+        },
+    },
+];
+
+// Antd Table pagination
+const pagination = computed(() => ({
+    current: deceased.value.current_page || 1,
+    pageSize: perPage.value,
+    total: deceased.value.total || 0,
+    showSizeChanger: true,
+    pageSizeOptions: [10, 25, 50, 100],
+    onChange: (page, pageSizeValue) => {
+        perPage.value = Number(pageSizeValue);
+        fetchUsers(page);
+    },
+}));
 </script>
 
 <template>
@@ -63,218 +175,46 @@ function goToPage(link) {
 
         <div class="py-5">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <div class="mb-4 flex items-center justify-between">
-                    <!-- Left: Show per page -->
-                    <div class="flex items-center space-x-2">
-                        <label for="perPage" class="text-sm font-medium text-gray-700">
-                            Show:
-                        </label>
-                        <select
-                            v-model="perPage"
-                            id="perPage"
-                            @change="fetchUsers(1)"
-                            class="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        >
-                            <option value="10">10</option>
-                            <option value="25">25</option>
-                            <option value="50">50</option>
-                            <option value="100">100</option>
-                        </select>
-                    </div>
-
+                <div class="mb-4 flex items-center justify-between space-x-4">
                     <!-- Right: Search -->
-                    <input
-                        v-model="search"
-                        type="text"
-                        placeholder="Search..."
-                        class="w-64 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
+                    <div class="relative flex-grow">
+                        <!-- Search Icon -->
+                        <div
+                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+                        >
+                            <svg
+                                class="h-5 w-5 text-gray-400"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z"
+                                />
+                            </svg>
+                        </div>
+
+                        <!-- Search Input -->
+                        <input
+                            v-model="search"
+                            type="text"
+                            placeholder="Search..."
+                            class="w-full pl-10 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        />
+                    </div>
                 </div>
 
                 <div class="overflow-x-auto relative shadow-md sm:rounded-lg">
-                    <table
-                        class="w-full text-sm text-left text-gray-500 dark:text-gray-400"
-                    >
-                        <thead
-                            class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400"
-                        >
-                            <tr>
-                                <th scope="col" class="py-3 px-6">ID#</th>
-                                <th scope="col" class="py-3 px-6">Full Name</th>
-                                <th scope="col" class="py-3 px-6">Address</th>
-                                <th scope="col" class="py-3 px-6">Passing Date</th>
-                                <th scope="col" class="py-3 px-6">Phone</th>
-                                <th scope="col" class="py-3 px-6">Amount</th>
-                                <th scope="col" class="py-3 px-6">Ledger</th>
-                                <th scope="col" class="py-3 px-6">Status</th>
-                                <th scope="col" class="py-3 px-6 text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="dec in deceased.data"
-                                :key="dec.dd_id"
-                                class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                            >
-                                <td
-                                    class="py-2 px-6 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                                >
-                                    {{ dec.hd_id }}
-                                </td>
-                                <td
-                                    class="py-2 px-6 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                                >
-                                    {{ dec.full_name }}
-                                </td>
-                                <td
-                                    class="py-2 px-6 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                                >
-                                    {{ dec.address }}
-                                </td>
-                                <td
-                                    class="py-2 px-6 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                                >
-                                    {{ dec.dd_date_died }}
-                                </td>
-                                <td
-                                    class="py-2 px-6 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                                >
-                                    {{ dec.phone1 }}
-                                </td>
-                                <td
-                                    class="py-2 px-6 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                                >
-                                    {{ dec.dd_total_amt }}
-                                </td>
-                                <td
-                                    class="py-2 px-6 font-medium text-gray-900 whitespace-nowrap dark:text-white"
-                                >
-                                    {{ dec.dd_amt_rcv }}
-                                </td>
-                                <td
-                                    class="py-2 px-6 font-medium whitespace-nowrap dark:text-white"
-                                >
-                                    <span
-                                        v-if="dec.dd_status == 0"
-                                        class="inline-flex items-center rounded px-2 py-1 text-xs font-semibold bg-red-100 text-red-700"
-                                    >
-                                        Pending
-                                    </span>
-
-                                    <span
-                                        v-else-if="dec.dd_status == 1"
-                                        class="inline-flex items-center rounded px-2 py-1 text-xs font-semibold bg-blue-100 text-blue-700"
-                                    >
-                                        Partial
-                                    </span>
-
-                                    <span
-                                        v-else
-                                        class="inline-flex items-center rounded px-2 py-1 text-xs font-semibold bg-green-100 text-green-700"
-                                    >
-                                        Settled
-                                    </span>
-                                </td>
-
-                                <td
-                                    class="py-2 px-1 flex items-center justify-center space-x-2"
-                                >
-                                    <button class="text-blue-500 hover:text-blue-700">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            class="h-5 w-5"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                            />
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M2.458 12C3.732 7.943 7.523 5 12 5
-                                                c4.478 0 8.268 2.943 9.542 7
-                                                -1.274 4.057-5.064 7-9.542 7
-                                                -4.477 0-8.268-2.943-9.542-7z"
-                                            />
-                                        </svg>
-                                    </button>
-
-                                    <button class="text-green-500 hover:text-green-700">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            class="h-5 w-5"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M7 2h8l5 5v13a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2z"
-                                            />
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M15 2v5h5"
-                                            />
-                                        </svg>
-                                    </button>
-                                </td>
-                            </tr>
-
-                            <tr v-if="deceased.data.length === 0">
-                                <td
-                                    colspan="3"
-                                    class="py-4 px-6 text-center text-gray-500"
-                                >
-                                    No data found.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- Flowbite pagination -->
-                    <div
-                        class="flex items-center justify-between py-3 px-4 bg-white border-t border-gray-200 sm:px-6"
-                    >
-                        <span class="text-sm text-gray-700 dark:text-gray-400">
-                            Showing
-                            <span class="font-semibold text-gray-900 dark:text-white">{{
-                                deceased.from
-                            }}</span>
-                            to
-                            <span class="font-semibold text-gray-900 dark:text-white">{{
-                                deceased.to
-                            }}</span>
-                            of
-                            <span class="font-semibold text-gray-900 dark:text-white">{{
-                                deceased.total
-                            }}</span>
-                            entries
-                        </span>
-                        <nav
-                            class="inline-flex -space-x-px rounded-md shadow-sm"
-                            aria-label="Pagination"
-                        >
-                            <button
-                                v-for="link in deceased.data.links"
-                                :key="link.label"
-                                v-html="link.label"
-                                :disabled="!link.url"
-                                @click.prevent="goToPage(link.url)"
-                                class="border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-50"
-                                :class="{ 'bg-blue-600 text-white': link.active }"
-                            ></button>
-                        </nav>
-                    </div>
+                    <a-table
+                        :dataSource="dataSource"
+                        :columns="columns"
+                        :pagination="pagination"
+                        rowKey="dd_id"
+                    />
                 </div>
             </div>
         </div>
