@@ -4,6 +4,7 @@ import { ref, watch, computed, h } from "vue";
 import { Head, usePage, router } from "@inertiajs/vue3";
 import { reactive } from "vue";
 import Swal from "sweetalert2";
+import { message } from "ant-design-vue";
 
 const page = usePage();
 
@@ -16,11 +17,12 @@ const search = ref(page.props.search || "");
 const currentPage = ref(users.value.current_page || 1);
 
 const form = ref({
-    email: "",
     password: "",
     fname: "",
     lname: "",
     status: "",
+    email: "",
+    phone1: "",
 });
 
 // Watch for perPage changes to reload data
@@ -54,10 +56,12 @@ function openAddModal() {
 
 function openEditModal(user) {
     editingUser.value = user;
-    form.value.email = user.email;
+    form.value.phone1 = user.phone1;
     form.value.fname = user.fname;
     form.value.lname = user.lname;
+    form.value.email = user.email;
     form.value.password = "";
+    form.value.status = user.status;
     showModal.value = true;
 }
 
@@ -68,12 +72,7 @@ function saveUser() {
             onSuccess: (page) => {
                 users.value = page.props.users;
                 resetForm();
-                Swal.fire({
-                    icon: "success",
-                    title: "User updated!",
-                    timer: 1000,
-                    showConfirmButton: false,
-                });
+                message.success("User updated successfully");
             },
         });
     } else {
@@ -82,12 +81,7 @@ function saveUser() {
             onSuccess: (page) => {
                 users.value = page.props.users;
                 resetForm();
-                Swal.fire({
-                    icon: "success",
-                    title: "User added!",
-                    timer: 1000,
-                    showConfirmButton: false,
-                });
+                message.success("User added successfully");
             },
         });
     }
@@ -113,7 +107,7 @@ const dataSource = computed(() =>
 const columns = [
     { title: "ID#", dataIndex: "hd_id", key: "hd_id" },
     { title: "Full Name", dataIndex: "full_name", key: "full_name" },
-    { title: "Email", dataIndex: "email", key: "email" },
+    { title: "Contact#", dataIndex: "phone1", key: "phone1" },
     { title: "Address", dataIndex: "address", key: "address" },
     {
         title: "Status",
@@ -407,26 +401,9 @@ const pagination = computed(() => ({
                             <option value="2">Deceased</option>
                         </select>
                     </div>
-
-                    <!-- <div class="relative z-0 w-full mb-5 group">
-                        <input
-                            type="text"
-                            v-model="form.role"
-                            id="floating_role"
-                            class="block py-2.5 px-0 w-full text-sm text-heading bg-transparent border-0 border-b-2 border-default-medium appearance-none focus:outline-none focus:ring-0 focus:border-brand peer"
-                            placeholder=" "
-                            required
-                        />
-                        <label
-                            for="floating_role"
-                            class="absolute text-sm text-body duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 peer-focus:text-fg-brand peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
-                            >Role</label
-                        >
-                    </div> -->
                 </div>
 
                 <div class="flex justify-end space-x-3">
-                    <!-- Primary Button -->
                     <button
                         type="submit"
                         class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition-colors"
@@ -434,7 +411,6 @@ const pagination = computed(() => ({
                         {{ editingUser ? "Update" : "Add" }}
                     </button>
 
-                    <!-- Danger Button -->
                     <button
                         @click="closeModal"
                         type="button"
@@ -444,6 +420,74 @@ const pagination = computed(() => ({
                     </button>
                 </div>
             </form>
+
+            <!-- <a-form
+                ref="formRef"
+                :model="form"
+                :label-col="{ span: 6 }"
+                :wrapper-col="{ span: 18 }"
+                @submit.prevent="saveUser"
+            >
+                <a-form-item
+                    label="Email"
+                    name="email"
+                    :rules="[
+                        {
+                            required: true,
+                            type: 'email',
+                            message: 'Please input a valid email!',
+                        },
+                    ]"
+                >
+                    <a-input v-model:value="form.email" placeholder="Email address" />
+                </a-form-item>
+
+                <a-form-item
+                    label="Password"
+                    name="password"
+                    :rules="[
+                        { required: !editingUser, message: 'Please input password!' },
+                    ]"
+                >
+                    <a-input-password
+                        v-model:value="form.password"
+                        placeholder="Password"
+                    />
+                </a-form-item>
+
+                <a-form-item
+                    label="First Name"
+                    name="fname"
+                    :rules="[{ required: true, message: 'Please input first name!' }]"
+                >
+                    <a-input v-model:value="form.fname" placeholder="First Name" />
+                </a-form-item>
+
+                <a-form-item
+                    label="Last Name"
+                    name="lname"
+                    :rules="[{ required: true, message: 'Please input last name!' }]"
+                >
+                    <a-input v-model:value="form.lname" placeholder="Last Name" />
+                </a-form-item>
+
+                <a-form-item v-if="editingUser" label="Status" name="status">
+                    <a-select v-model:value="form.status" placeholder="Select status">
+                        <a-select-option value="0">Active</a-select-option>
+                        <a-select-option value="1">Inactive</a-select-option>
+                        <a-select-option value="2">Deceased</a-select-option>
+                    </a-select>
+                </a-form-item>
+
+                <a-form-item :wrapper-col="{ span: 18, offset: 6 }">
+                    <a-button type="primary" html-type="submit">{{
+                        editingUser ? "Update" : "Add"
+                    }}</a-button>
+                    <a-button type="danger" style="margin-left: 10px" @click="closeModal"
+                        >Cancel</a-button
+                    >
+                </a-form-item>
+            </a-form> -->
         </div>
     </div>
 </template>

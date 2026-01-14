@@ -13,6 +13,7 @@ const navLinks = [
     { name: "Dashboard", route: "dashboard" },
     { name: "Members", route: "user" },
     { name: "Mortuary", route: "mortuary" },
+    { name: "Utility Assets", route: "utility" },
     // { name: "Tagging", route: "tagging" },
     // { name: "Transmittal", route: "transmittal" },
     // { name: "Van Manifest", route: "van_manifest" },

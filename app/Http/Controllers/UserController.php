@@ -23,6 +23,7 @@ class UserController extends Controller
             'status',
             DB::raw("CONCAT(barangay, ' ',city, ' ',province) AS address"),
             DB::raw("CONCAT(fname, ' ', lname) AS full_name"), 
+            'phone1',
             'email',
             'fname',
             'lname'
@@ -31,7 +32,7 @@ class UserController extends Controller
                 $q->where(function ($q) use ($search) {
                     $q->where('fname', 'LIKE', "%{$search}%")
                     ->orWhere('lname', 'LIKE', "%{$search}%")
-                    ->orWhere('email', 'LIKE', "%{$search}%")
+                    ->orWhere('phone1', 'LIKE', "%{$search}%")
                     ->orWhere(DB::raw("CONCAT(fname, ' ', lname)"), 'LIKE', "%{$search}%");;
                 });
             })
@@ -99,7 +100,7 @@ class UserController extends Controller
             'password' => 'nullable',
             'fname' => 'string',
             'lname' => 'string',
-            'status' => 'integer',
+            'status' => 'nullable|integer',
         ]);
 
         if (!empty($data['password'])) {

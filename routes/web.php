@@ -40,6 +40,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/user/{user}', [UserController::class, 'destroy'])->name('user.destroy');
 
     Route::get('/mortuary', [MortController::class, 'index'])->name('mortuary');
+    Route::get('/utility', [MortController::class, 'index'])->name('utility');
+    
 });
 
 require __DIR__.'/auth.php';
