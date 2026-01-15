@@ -162,6 +162,7 @@ const pagination = computed(() => ({
     total: deceased.value.total || 0,
     showSizeChanger: true,
     pageSizeOptions: [10, 25, 50, 100],
+    style: { marginRight: "1.25rem", marginTop: "1rem", textAlign: "right" },   
     onChange: (page, pageSizeValue) => {
         perPage.value = Number(pageSizeValue);
         fetchUsers(page);

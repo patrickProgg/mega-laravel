@@ -21,7 +21,7 @@ const perPage = ref(Number(page.props.perPage) || 10);
 const search = ref(page.props.search || "");
 const currentPage = ref(users.value.current_page || 1);
 
-const memberPerPage = ref(10);
+const memberPerPage = ref(5);
 const memberCurrentPage = ref(1);
 
 const form = ref({
