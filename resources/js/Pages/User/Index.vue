@@ -497,6 +497,30 @@ watch(showViewModal, (open) => {
 function openAddMember() {
     showAddMemberModal.value = true;
 }
+
+watch(
+    () => form.value.birthday,
+    (newBirthday) => {
+        if (newBirthday) {
+            form.value.age = calculateAge(newBirthday);
+        } else {
+            form.value.age = "";
+        }
+    }
+);
+
+// Helper function to calculate age from birthday string
+function calculateAge(birthday) {
+    const birthDate = new Date(birthday);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+}
 </script>
 
 <template>
@@ -618,8 +642,9 @@ function openAddMember() {
                                 v-model:value="form.birthday"
                                 placeholder="Birthday"
                                 type="date"
-                            /> </a-form-item
-                    ></a-col>
+                            />
+                        </a-form-item>
+                    </a-col>
 
                     <a-col :xs="24" :sm="3">
                         <a-form-item
@@ -631,8 +656,10 @@ function openAddMember() {
                                 v-model:value="form.age"
                                 placeholder="Age"
                                 type="number"
-                            /> </a-form-item
-                    ></a-col>
+                                readonly
+                            />
+                        </a-form-item>
+                    </a-col>
                 </a-row>
 
                 <a-row :gutter="16">
