@@ -11,6 +11,9 @@ const page = usePage();
 // reactive references
 const users = ref(page.props.users);
 const showModal = ref(false);
+const showViewModal = ref(false);
+const selectedUser = ref(null);
+const memberDataSource = ref([]);
 const editingUser = ref(null);
 const perPage = ref(Number(page.props.perPage) || 10);
 const search = ref(page.props.search || "");
@@ -119,13 +122,13 @@ const columns = [
 
             if (text === 0) {
                 label = "Active";
-                colorClass = "bg-green-100 text-green-700"; // success
+                colorClass = "bg-green-100 text-green-700";
             } else if (text === 1) {
                 label = "Inactive";
-                colorClass = "bg-red-100 text-red-700"; // danger
+                colorClass = "bg-red-100 text-red-700";
             } else if (text === 2) {
                 label = "Deceased";
-                colorClass = "bg-blue-100 text-blue-700"; // primary
+                colorClass = "bg-blue-100 text-blue-700";
             }
 
             return h(
@@ -174,12 +177,11 @@ const columns = [
                     ]
                 ),
 
-                // Delete button with trash icon
                 h(
                     "button",
                     {
                         class: "text-blue-500 hover:text-blue-700 rounded",
-                        onClick: () => viewUser(record), // replace deleteUser with viewUser
+                        onClick: () => viewUser(record),
                         title: "View",
                     },
                     [
@@ -244,6 +246,63 @@ const pagination = computed(() => ({
         fetchUsers(page);
     },
 }));
+
+function viewUser(user) {
+    selectedUser.value = user;
+    showViewModal.value = true;
+
+    // Load members from API
+    router.get(
+        `/user/${user.hd_id}`,
+        {},
+        {
+            onSuccess: (page) => {
+                console.log("Members", page.props.user.members);
+                memberDataSource.value = page.props.user.members;
+            },
+        }
+    );
+}
+
+// const cachedUsers = reactive({});
+
+// function viewUser(record) {
+//     const id = record.hd_id;
+//     if (cachedUsers[id]) {
+//         selectedUser.value = cachedUsers[id];
+//         showViewModal.value = true;
+//         return;
+//     }
+
+//     router.get(
+//         `/user/${id}`,
+//         {},
+//         {
+//             onSuccess: (page) => {
+//                 cachedUsers[id] = page.props.user;
+//                 selectedUser.value = page.props.user;
+//                 showViewModal.value = true;
+//             },
+//         }
+//     );
+// }
+
+const memberColumns = [
+    { title: "ID", dataIndex: "hd_id", key: "hd_id" },
+    { title: "Full Name", dataIndex: "fname", key: "fname" },
+    { title: "Email", dataIndex: "email", key: "email" },
+    {
+        title: "Status",
+        dataIndex: "status",
+        key: "status",
+        customRender: ({ text }) => {
+            if (text === 0) return "Active";
+            if (text === 1) return "Inactive";
+            if (text === 2) return "Deceased";
+            return "";
+        },
+    },
+];
 </script>
 
 <template>
@@ -263,6 +322,22 @@ const pagination = computed(() => ({
                     >
                         Add Member
                     </button>
+
+                    <!-- <div>
+                        <a-button type="primary" @click="showModals"
+                            >Open Modal of 1000px width</a-button
+                        >
+                        <a-modal
+                            v-model:open="open"
+                            width="1000px"
+                            title="Basic Modal"
+                            @ok="handleOk"
+                        >
+                            <p>Some contents...</p>
+                            <p>Some contents...</p>
+                            <p>Some contents...</p>
+                        </a-modal>
+                    </div> -->
 
                     <!-- Right: Search -->
                     <div class="relative flex-grow">
@@ -490,4 +565,24 @@ const pagination = computed(() => ({
             </a-form> -->
         </div>
     </div>
+    <a-modal v-model:open="showViewModal" title="Member Details" width="1000px">
+        <p>
+            Family Representative –
+            <strong>{{ selectedUser?.full_name }}</strong>
+        </p>
+        <a-divider orientation="left">Family Members</a-divider>
+
+        <div class="flex justify-start mb-3">
+            <a-button type="primary" @click="openAddMember"> Add Member </a-button>
+        </div>
+
+        <div class="overflow-x-auto relative shadow-md sm:rounded-lg">
+            <a-table
+                :dataSource="memberDataSource"
+                :columns="memberColumns"
+                :pagination="false"
+                rowKey="hd_id"
+            />
+        </div>
+    </a-modal>
 </template>

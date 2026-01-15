@@ -38,10 +38,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/user', [UserController::class, 'store'])->name('user.store');
     Route::put('/user/{user}', [UserController::class, 'update'])->name('user.update');
     Route::delete('/user/{user}', [UserController::class, 'destroy'])->name('user.destroy');
+    Route::get('/user/{user}', [UserController::class, 'show'])->name('user.show');
+
 
     Route::get('/mortuary', [MortController::class, 'index'])->name('mortuary');
     Route::get('/utility', [MortController::class, 'index'])->name('utility');
-    
+
 });
 
 require __DIR__.'/auth.php';

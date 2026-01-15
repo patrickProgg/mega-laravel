@@ -53,4 +53,10 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function members()
+    {
+        return $this->hasMany(User_ln::class, 'hd_id', 'hd_id'); 
+       
+    }
 }
