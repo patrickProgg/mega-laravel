@@ -47,7 +47,7 @@ const dataSource = computed(() =>
 );
 
 const columns = [
-    { title: "ID#", dataIndex: "hd_id", key: "hd_id", width: 20 },
+    { title: "ID#", dataIndex: "hd_id", key: "hd_id", width: 60 },
     { title: "Full Name", dataIndex: "full_name", key: "full_name" },
     { title: "Address", dataIndex: "address", key: "address" },
     { title: "Passing Date", dataIndex: "dd_date_died", key: "dd_date_died" },
@@ -58,7 +58,7 @@ const columns = [
         title: "Status",
         dataIndex: "dd_status",
         key: "status",
-        width: 100,
+        width: 120,
         customRender: ({ text }) => {
             let label = "";
             let colorClass = "";
@@ -86,9 +86,9 @@ const columns = [
     {
         title: "Action",
         key: "action",
-        width: 100,
+        width: 130,
         customRender: ({ record }) => {
-            return h("div", { class: "flex space-x-2" }, [
+            return h("div", { class: "flex space-x-4" }, [
                 // Edit button with pencil icon
                 h(
                     "button",
@@ -179,7 +179,7 @@ const pagination = computed(() => ({
         </template> -->
 
         <div class="py-5">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div class="mx-auto max-w-[1600px] sm:px-6 lg:px-8">
                 <div class="mb-4 flex items-center justify-between space-x-4">
                     <!-- Right: Search -->
                     <div class="relative flex-grow">
@@ -200,7 +200,7 @@ const pagination = computed(() => ({
                     </div>
                 </div>
 
-                <div class="overflow-x-auto relative shadow-md sm:rounded-lg">
+                <div class="overflow-x-auto relative shadow-lg rounded-xl bg-white p-6">    
                     <a-table
                         :dataSource="dataSource"
                         :columns="columns"

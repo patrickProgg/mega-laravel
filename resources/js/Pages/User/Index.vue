@@ -266,7 +266,7 @@ const columns = [
         title: "ID#",
         dataIndex: "hd_id",
         key: "hd_id",
-        width: 20,
+        width: 60,
         customCell: () => ({
             style: {
                 padding: "0",
@@ -280,7 +280,7 @@ const columns = [
         title: "Status",
         dataIndex: "status",
         key: "status",
-        width: 100,
+        width: 120,
         customRender: ({ text }) => {
             let label = "";
             let colorClass = "";
@@ -309,9 +309,9 @@ const columns = [
     {
         title: "Action",
         key: "action",
-        width: 100,
+        width: 130,
         customRender: ({ record }) => {
-            return h("div", { class: "flex space-x-2" }, [
+            return h("div", { class: "flex space-x-4" }, [
                 // Edit button with pencil icon
                 h(
                     "button",
@@ -528,7 +528,7 @@ function calculateAge(birthday) {
 
     <AuthenticatedLayout>
         <div class="py-5">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+            <div class="mx-auto max-w-[1600px] sm:px-6 lg:px-8">
                 <div class="mb-4 flex items-center justify-between space-x-4">
                     <a-button type="primary" @click="openAddModal">Add Member</a-button>
                     <div class="relative flex-grow">
@@ -549,7 +549,7 @@ function calculateAge(birthday) {
                     </div>
                 </div>
 
-                <div class="overflow-x-auto relative shadow-md sm:rounded-lg">
+                <div class="overflow-x-auto relative shadow-lg rounded-xl bg-white p-6">
                     <a-table
                         :dataSource="dataSource"
                         :columns="columns"
@@ -581,7 +581,7 @@ function calculateAge(birthday) {
                         <a-form-item
                             label="First Name"
                             name="fname"
-                            :rules="[{ message: 'Please input first name!' }]"
+                            :rules="[{ required: true, message: 'Please input first name!' }]"
                         >
                             <a-input
                                 :value="form.fname"
@@ -655,8 +655,7 @@ function calculateAge(birthday) {
                             <a-input
                                 v-model:value="form.age"
                                 placeholder="Age"
-                                type="number"
-                                readonly
+                                disabled
                             />
                         </a-form-item>
                     </a-col>
@@ -665,7 +664,7 @@ function calculateAge(birthday) {
                 <a-row :gutter="16">
                     <a-col :xs="24" :sm="12">
                         <a-form-item
-                            label="Contact Number 1"
+                            label="Contact # 1"
                             name="phone_number_1"
                             :rules="[{ message: 'Please input contact number 1!' }]"
                         >
@@ -679,7 +678,7 @@ function calculateAge(birthday) {
                     </a-col>
                     <a-col :xs="24" :sm="12">
                         <a-form-item
-                            label="Contact Number 2"
+                            label="Contact # 2"
                             name="phone_number_2"
                             :rules="[{ message: 'Please input contact number 2!' }]"
                         >
@@ -825,13 +824,20 @@ function calculateAge(birthday) {
                     >Status</a-divider
                 >
 
-                <a-form-item v-if="editingUser" label="Status" name="status">
-                    <a-select v-model:value="form.status" placeholder="Select status">
-                        <a-select-option :value="0">Active</a-select-option>
-                        <a-select-option :value="1">Inactive</a-select-option>
-                        <a-select-option :value="2">Deceased</a-select-option>
-                    </a-select>
-                </a-form-item>
+                <a-row :gutter="16">
+                    <a-col :xs="24" :sm="5">
+                        <a-form-item v-if="editingUser" label="Status" name="status">
+                            <a-select
+                                v-model:value="form.status"
+                                placeholder="Select status"
+                            >
+                                <a-select-option :value="0">Active</a-select-option>
+                                <a-select-option :value="1">Inactive</a-select-option>
+                                <a-select-option :value="2">Deceased</a-select-option>
+                            </a-select>
+                        </a-form-item>
+                    </a-col>
+                </a-row>
             </a-form>
 
             <template #footer>

@@ -72,8 +72,17 @@ class User extends Authenticatable
 
     public function getAddressAttribute()
     {
-        return trim("{$this->barangay} {$this->city} {$this->province}");
+        $parts = [
+            $this->purok,
+            $this->barangay,
+            $this->city,
+            $this->province,
+            $this->zip_code
+        ];
+
+        return implode(', ', array_filter($parts));
     }
+
 
     public function members()
     {
