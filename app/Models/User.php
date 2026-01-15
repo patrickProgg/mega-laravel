@@ -16,6 +16,8 @@ class User extends Authenticatable
 
     protected $primaryKey = 'hd_id';
 
+    protected $appends = ['full_name', 'address'];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -52,6 +54,16 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function getFullNameAttribute()
+    {
+        return trim("{$this->fname} {$this->lname}");
+    }
+
+    public function getAddressAttribute()
+    {
+        return trim("{$this->barangay} {$this->city} {$this->province}");
     }
 
     public function members()

@@ -1,5 +1,7 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import { InfoCircleOutlined } from "@ant-design/icons-vue";
+import { UserOutlined } from "@ant-design/icons-vue";
 import { ref, watch, computed, h } from "vue";
 import { Head, usePage, router } from "@inertiajs/vue3";
 
@@ -45,7 +47,7 @@ const dataSource = computed(() =>
 );
 
 const columns = [
-    { title: "ID#", dataIndex: "hd_id", key: "hd_id" },
+    { title: "ID#", dataIndex: "hd_id", key: "hd_id", width: 20 },
     { title: "Full Name", dataIndex: "full_name", key: "full_name" },
     { title: "Address", dataIndex: "address", key: "address" },
     { title: "Passing Date", dataIndex: "dd_date_died", key: "dd_date_died" },
@@ -56,6 +58,7 @@ const columns = [
         title: "Status",
         dataIndex: "dd_status",
         key: "status",
+        width: 100,
         customRender: ({ text }) => {
             let label = "";
             let colorClass = "";
@@ -83,6 +86,7 @@ const columns = [
     {
         title: "Action",
         key: "action",
+        width: 100,
         customRender: ({ record }) => {
             return h("div", { class: "flex space-x-2" }, [
                 // Edit button with pencil icon
@@ -178,33 +182,20 @@ const pagination = computed(() => ({
                 <div class="mb-4 flex items-center justify-between space-x-4">
                     <!-- Right: Search -->
                     <div class="relative flex-grow">
-                        <!-- Search Icon -->
-                        <div
-                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-                        >
-                            <svg
-                                class="h-5 w-5 text-gray-400"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z"
-                                />
-                            </svg>
+                        <div class="components-input-demo-presuffix">
+                            <a-input v-model:value="search" placeholder="Search...">
+                                <template #prefix>
+                                    <user-outlined />
+                                </template>
+                                <template #suffix>
+                                    <a-tooltip title="Extra information">
+                                        <info-circle-outlined
+                                            style="color: rgba(0, 0, 0, 0.45)"
+                                        />
+                                    </a-tooltip>
+                                </template>
+                            </a-input>
                         </div>
-
-                        <!-- Search Input -->
-                        <input
-                            v-model="search"
-                            type="text"
-                            placeholder="Search..."
-                            class="w-full pl-10 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
                     </div>
                 </div>
 

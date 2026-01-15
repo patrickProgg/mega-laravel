@@ -19,34 +19,47 @@ class UserController extends Controller
         $perPage = $request->input('perPage', 10);
         $search = $request->input('search');
 
+        $viewId = $request->query('view');
+
+        $users = User::paginate(10);
+    
+        $selectedUser = null;
+    
+        if ($viewId) {
+            $selectedUser = User::with('members')->find($viewId);
+        }
+
         $users = User::select(
-            'hd_id',
-            'status',
-            DB::raw("CONCAT(barangay, ' ',city, ' ',province) AS address"),
-            DB::raw("CONCAT(fname, ' ', lname) AS full_name"), 
-            'phone1',
-            'email',
-            'fname',
-            'lname'
-        )
+                'hd_id',
+                'status',
+                'phone1',
+                'email',
+                'fname',
+                'lname',
+                'barangay',
+                'city',
+                'province'
+            )
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('fname', 'LIKE', "%{$search}%")
                     ->orWhere('lname', 'LIKE', "%{$search}%")
                     ->orWhere('phone1', 'LIKE', "%{$search}%")
-                    ->orWhere(DB::raw("CONCAT(fname, ' ', lname)"), 'LIKE', "%{$search}%");;
+                    ->orWhereRaw("CONCAT(fname, ' ', lname) LIKE ?", ["%{$search}%"]);
                 });
             })
-            ->orderBy('hd_id', 'desc')
+            ->orderByDesc('hd_id')
             ->paginate($perPage)
             ->withQueryString();
-            
+
         return Inertia::render('User/Index', [
             'users' => $users,
             'perPage' => $perPage,
-            'search' => $search
+            'search' => $search,
+            'selectedUser' => $selectedUser,
         ]);
     }
+
 
     /**
      * Show the form for creating a new resource.

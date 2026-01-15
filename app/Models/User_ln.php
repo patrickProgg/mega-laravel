@@ -28,4 +28,16 @@ class User_ln extends Model
         'password',
     ];
 
+    protected $appends = ['full_name', 'address'];
+
+    public function getFullNameAttribute()
+    {
+        return trim("{$this->fname} {$this->lname}");
+    }
+
+    public function getAddressAttribute()
+    {
+        return trim("{$this->barangay} {$this->city} {$this->province}");
+    }
+
 }

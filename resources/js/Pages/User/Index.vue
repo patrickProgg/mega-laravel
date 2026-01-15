@@ -1,6 +1,8 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { ref, watch, computed, h } from "vue";
+import { InfoCircleOutlined } from "@ant-design/icons-vue";
+import { UserOutlined } from "@ant-design/icons-vue";
+import { ref, watch, computed, h, onMounted } from "vue";
 import { Head, usePage, router } from "@inertiajs/vue3";
 import { reactive } from "vue";
 import Swal from "sweetalert2";
@@ -19,35 +21,41 @@ const perPage = ref(Number(page.props.perPage) || 10);
 const search = ref(page.props.search || "");
 const currentPage = ref(users.value.current_page || 1);
 
+const memberPerPage = ref(10);
+const memberCurrentPage = ref(1);
+
 const form = ref({
+    email: "",
     password: "",
     fname: "",
     lname: "",
     status: "",
-    email: "",
     phone1: "",
 });
 
-// Watch for perPage changes to reload data
 watch(perPage, () => {
     fetchUsers(1);
 });
 
-// Watch for search input (with debounce)
 let searchTimeout = null;
 watch(search, () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
-        fetchUsers(1); // always reset to first page on search
-    }, 400); // 400ms debounce
+        fetchUsers(1);
+    }, 400);
 });
 
 function fetchUsers(pageNumber = currentPage.value) {
-    currentPage.value = pageNumber; // make sure this updates
+    currentPage.value = pageNumber;
+
     router.get(
         "/user",
-        { perPage: perPage.value, page: pageNumber, search: search.value },
-        { preserveState: false, preserveScroll: true, replace: true }
+        {
+            page: pageNumber,
+            ...(perPage.value !== 10 && { perPage: perPage.value }),
+            ...(search.value && { search: search.value }),
+        },
+        { preserveScroll: true }
     );
 }
 
@@ -59,18 +67,17 @@ function openAddModal() {
 
 function openEditModal(user) {
     editingUser.value = user;
-    form.value.phone1 = user.phone1;
-    form.value.fname = user.fname;
-    form.value.lname = user.lname;
     form.value.email = user.email;
     form.value.password = "";
+    form.value.fname = user.fname;
+    form.value.lname = user.lname;
     form.value.status = user.status;
+    form.value.phone1 = user.phone1;
     showModal.value = true;
 }
 
 function saveUser() {
     if (editingUser.value) {
-        // Update
         router.put(`/user/${editingUser.value.hd_id}`, form.value, {
             onSuccess: (page) => {
                 users.value = page.props.users;
@@ -79,7 +86,6 @@ function saveUser() {
             },
         });
     } else {
-        // Add
         router.post("/user", form.value, {
             onSuccess: (page) => {
                 users.value = page.props.users;
@@ -91,7 +97,14 @@ function saveUser() {
 }
 
 function resetForm() {
-    form.value = { email: "", password: "", fname: "", lname: "" };
+    form.value = {
+        email: "",
+        password: "",
+        fname: "",
+        lname: "",
+        status: "",
+        phone1: "",
+    };
     editingUser.value = null;
     showModal.value = false;
 }
@@ -108,7 +121,7 @@ const dataSource = computed(() =>
 );
 
 const columns = [
-    { title: "ID#", dataIndex: "hd_id", key: "hd_id" },
+    { title: "ID#", dataIndex: "hd_id", key: "hd_id", width: 20 },
     { title: "Full Name", dataIndex: "full_name", key: "full_name" },
     { title: "Contact#", dataIndex: "phone1", key: "phone1" },
     { title: "Address", dataIndex: "address", key: "address" },
@@ -116,6 +129,7 @@ const columns = [
         title: "Status",
         dataIndex: "status",
         key: "status",
+        width: 100,
         customRender: ({ text }) => {
             let label = "";
             let colorClass = "";
@@ -144,6 +158,7 @@ const columns = [
     {
         title: "Action",
         key: "action",
+        width: 100,
         customRender: ({ record }) => {
             return h("div", { class: "flex space-x-2" }, [
                 // Edit button with pencil icon
@@ -240,69 +255,97 @@ const pagination = computed(() => ({
     pageSize: perPage.value,
     total: users.value.total || 0,
     showSizeChanger: true,
-    pageSizeOptions: [10, 25, 50, 100],
+    pageSizeOptions: [10, 20, 50, 100],
+    style: { marginRight: "1.25rem", marginTop: "1rem", textAlign: "right" },
     onChange: (page, pageSizeValue) => {
         perPage.value = Number(pageSizeValue);
         fetchUsers(page);
     },
 }));
 
-function viewUser(user) {
-    selectedUser.value = user;
-    showViewModal.value = true;
-
-    // Load members from API
-    router.get(
-        `/user/${user.hd_id}`,
-        {},
-        {
-            onSuccess: (page) => {
-                console.log("Members", page.props.user.members);
-                memberDataSource.value = page.props.user.members;
-            },
-        }
-    );
-}
-
-// const cachedUsers = reactive({});
-
-// function viewUser(record) {
-//     const id = record.hd_id;
-//     if (cachedUsers[id]) {
-//         selectedUser.value = cachedUsers[id];
-//         showViewModal.value = true;
-//         return;
-//     }
-
-//     router.get(
-//         `/user/${id}`,
-//         {},
-//         {
-//             onSuccess: (page) => {
-//                 cachedUsers[id] = page.props.user;
-//                 selectedUser.value = page.props.user;
-//                 showViewModal.value = true;
-//             },
-//         }
-//     );
-// }
-
 const memberColumns = [
-    { title: "ID", dataIndex: "hd_id", key: "hd_id" },
-    { title: "Full Name", dataIndex: "fname", key: "fname" },
-    { title: "Email", dataIndex: "email", key: "email" },
+    { title: "ID#", dataIndex: "ln_id", key: "ln_id", width: 20 },
+    { title: "Full Name", dataIndex: "full_name", key: "full_name" },
+    { title: "Address", dataIndex: "address", key: "address" },
+    { title: "Phone", dataIndex: "phone1", key: "phone1" },
     {
         title: "Status",
         dataIndex: "status",
         key: "status",
+        width: 100,
         customRender: ({ text }) => {
-            if (text === 0) return "Active";
-            if (text === 1) return "Inactive";
-            if (text === 2) return "Deceased";
-            return "";
+            let label = "";
+            let colorClass = "";
+
+            if (text === 0) {
+                label = "Active";
+                colorClass = "bg-green-100 text-green-700";
+            } else if (text === 1) {
+                label = "Inactive";
+                colorClass = "bg-red-100 text-red-700";
+            } else if (text === 2) {
+                label = "Deceased";
+                colorClass = "bg-blue-100 text-blue-700";
+            }
+
+            return h(
+                "span",
+                {
+                    class: `inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${colorClass}`,
+                },
+                label
+            );
         },
     },
 ];
+
+function viewUser(user) {
+    router.get(
+        "/user",
+        { view: user.hd_id },
+        {
+            preserveState: true,
+            replace: true,
+        }
+    );
+}
+
+watch(
+    () => page.props.selectedUser,
+    (user) => {
+        if (user) {
+            selectedUser.value = user;
+            memberDataSource.value = user.members;
+            showViewModal.value = true;
+        } else {
+            showViewModal.value = false;
+        }
+    },
+    { immediate: true }
+);
+
+const memberPagination = computed(() => ({
+    current: memberCurrentPage.value,
+    pageSize: memberPerPage.value,
+    total: memberDataSource.value.length,
+    showSizeChanger: true,
+    pageSizeOptions: [5, 10, 25, 50],
+    style: { marginRight: "1.25rem", marginTop: "1rem", textAlign: "right" },
+    onChange: (page, pageSize) => {
+        memberCurrentPage.value = page;
+        memberPerPage.value = pageSize;
+    },
+}));
+
+watch(showViewModal, (open) => {
+    if (!open) {
+        router.get("/user", {}, { preserveState: true, replace: true });
+    }
+});
+
+function openAddMember() {
+    showAddMemberModal.value = true;
+}
 </script>
 
 <template>
@@ -316,58 +359,22 @@ const memberColumns = [
         <div class="py-5">
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <div class="mb-4 flex items-center justify-between space-x-4">
-                    <button
-                        @click="openAddModal"
-                        class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md shadow"
-                    >
-                        Add Member
-                    </button>
-
-                    <!-- <div>
-                        <a-button type="primary" @click="showModals"
-                            >Open Modal of 1000px width</a-button
-                        >
-                        <a-modal
-                            v-model:open="open"
-                            width="1000px"
-                            title="Basic Modal"
-                            @ok="handleOk"
-                        >
-                            <p>Some contents...</p>
-                            <p>Some contents...</p>
-                            <p>Some contents...</p>
-                        </a-modal>
-                    </div> -->
-
-                    <!-- Right: Search -->
+                    <a-button type="primary" @click="openAddModal">Add Member</a-button>
                     <div class="relative flex-grow">
-                        <!-- Search Icon -->
-                        <div
-                            class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-                        >
-                            <svg
-                                class="h-5 w-5 text-gray-400"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 3a7.5 7.5 0 006.15 13.65z"
-                                />
-                            </svg>
+                        <div class="components-input-demo-presuffix">
+                            <a-input v-model:value="search" placeholder="Search...">
+                                <template #prefix>
+                                    <user-outlined />
+                                </template>
+                                <template #suffix>
+                                    <a-tooltip title="Extra information">
+                                        <info-circle-outlined
+                                            style="color: rgba(0, 0, 0, 0.45)"
+                                        />
+                                    </a-tooltip>
+                                </template>
+                            </a-input>
                         </div>
-
-                        <!-- Search Input -->
-                        <input
-                            v-model="search"
-                            type="text"
-                            placeholder="Search..."
-                            class="w-full pl-10 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
                     </div>
                 </div>
 
@@ -376,13 +383,14 @@ const memberColumns = [
                         :dataSource="dataSource"
                         :columns="columns"
                         :pagination="pagination"
+                        rowKey="hd_id"
                     />
                 </div>
             </div>
         </div>
     </AuthenticatedLayout>
 
-    <div
+    <!-- <div
         v-if="showModal"
         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
     >
@@ -563,9 +571,90 @@ const memberColumns = [
                     >
                 </a-form-item>
             </a-form> -->
-        </div>
-    </div>
-    <a-modal v-model:open="showViewModal" title="Member Details" width="1000px">
+    <!-- </div>
+    </div>  -->
+
+    <a-modal
+        v-model:open="showModal"
+        :title="editingUser ? 'Update Member' : 'Add Member'"
+        width="1000px"
+        :destroyOnClose="false"
+        :style="{ top: '20px' }"
+    >
+        <a-form
+            ref="formRef"
+            :model="form.value"
+            :label-col="{ span: 6 }"
+            :wrapper-col="{ span: 18 }"
+            @submit.prevent="saveUser"
+        >
+            <a-form-item
+                label="Email"
+                name="email"
+                :rules="[
+                    {
+                        required: true,
+                        type: 'email',
+                        message: 'Please input a valid email!',
+                    },
+                ]"
+            >
+                <a-input v-model:value="form.email" placeholder="Email address" />
+            </a-form-item>
+
+            <a-form-item
+                label="Password"
+                name="password"
+                :rules="[{ required: !editingUser, message: 'Please input password!' }]"
+            >
+                <a-input-password v-model:value="form.password" placeholder="Password" />
+            </a-form-item>
+
+            <a-form-item
+                label="First Name"
+                name="fname"
+                :rules="[{ required: true, message: 'Please input first name!' }]"
+            >
+                <a-input v-model:value="form.fname" placeholder="First Name" />
+            </a-form-item>
+
+            <a-form-item
+                label="Last Name"
+                name="lname"
+                :rules="[{ required: true, message: 'Please input last name!' }]"
+            >
+                <a-input v-model:value="form.lname" placeholder="Last Name" />
+            </a-form-item>
+
+            <a-form-item v-if="editingUser" label="Status" name="status">
+                <a-select v-model:value="form.status" placeholder="Select status">
+                    <a-select-option :value="0">Active</a-select-option>
+                    <a-select-option :value="1">Inactive</a-select-option>
+                    <a-select-option :value="2">Deceased</a-select-option>
+                </a-select>
+            </a-form-item>
+        </a-form>
+
+        <!-- Footer slot -->
+        <template #footer>
+            <a-button danger @click="closeModal">Close</a-button>
+            <a-button
+                type="primary"
+                :title="editingUser ? 'Update' : 'Add'"
+                @click="saveUser"
+            >
+                {{ editingUser ? "Update" : "Add" }}
+            </a-button>
+        </template>
+    </a-modal>
+
+    <a-modal
+        v-model:open="showViewModal"
+        title="Member Details"
+        width="1000px"
+        :destroyOnClose="false"
+        :style="{ top: '20px' }"
+    >
         <p>
             Family Representative –
             <strong>{{ selectedUser?.full_name }}</strong>
@@ -580,9 +669,13 @@ const memberColumns = [
             <a-table
                 :dataSource="memberDataSource"
                 :columns="memberColumns"
-                :pagination="false"
+                :pagination="memberPagination"
                 rowKey="hd_id"
             />
         </div>
+
+        <template #footer>
+            <a-button danger @click="showViewModal = false"> Close </a-button>
+        </template>
     </a-modal>
 </template>
