@@ -2,10 +2,8 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { InfoCircleOutlined } from "@ant-design/icons-vue";
 import { UserOutlined } from "@ant-design/icons-vue";
-import { ref, watch, computed, h, onMounted } from "vue";
+import { ref, watch, computed, h } from "vue";
 import { Head, usePage, router } from "@inertiajs/vue3";
-import { reactive } from "vue";
-import Swal from "sweetalert2";
 import { message } from "ant-design-vue";
 
 const page = usePage();
@@ -640,7 +638,6 @@ function openAddMember() {
             <a-button danger @click="closeModal">Close</a-button>
             <a-button
                 type="primary"
-                :title="editingUser ? 'Update' : 'Add'"
                 @click="saveUser"
             >
                 {{ editingUser ? "Update" : "Add" }}
