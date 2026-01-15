@@ -39,6 +39,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/user/{user}', [UserController::class, 'update'])->name('user.update');
     Route::delete('/user/{user}', [UserController::class, 'destroy'])->name('user.destroy');
     Route::get('/user/{user}', [UserController::class, 'show'])->name('user.show');
+    
+    // API endpoints for address dropdowns
+    Route::get('/api/provinces', [UserController::class, 'getProvinces']);
+    Route::get('/api/cities/{province}', [UserController::class, 'getCities']);
+    Route::get('/api/barangays/{city}', [UserController::class, 'getBarangays']);
+    Route::get('/api/puroks/{barangay}', [UserController::class, 'getPuroks']);
 
 
     Route::get('/mortuary', [MortController::class, 'index'])->name('mortuary');

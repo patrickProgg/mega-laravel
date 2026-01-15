@@ -32,25 +32,32 @@ class UserController extends Controller
         $users = User::select(
                 'hd_id',
                 'status',
-                'phone1',
-                'email',
                 'fname',
+                'mname',
                 'lname',
+                'email',
+                'birthday',
+                'age',
+                'phone1',
+                'phone2',
+                'purok',
                 'barangay',
                 'city',
-                'province'
+                'province',
+                'zip_code'
             )
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($q) use ($search) {
                     $q->where('fname', 'LIKE', "%{$search}%")
                     ->orWhere('lname', 'LIKE', "%{$search}%")
                     ->orWhere('phone1', 'LIKE', "%{$search}%")
-                    ->orWhereRaw("CONCAT(fname, ' ', lname) LIKE ?", ["%{$search}%"]);
+                    ->orWhereRaw("CONCAT(fname, ' ', lname) LIKE ?", ["%{$search}%"])
+                    ->orWhereRaw("CONCAT(barangay, ' ', city, ' ', province) LIKE ?", ["%{$search}%"]);
                 });
             })
             ->orderByDesc('hd_id')
             ->paginate($perPage)
-            ->withQueryString();
+            ->withQueryString();;
 
         return Inertia::render('User/Index', [
             'users' => $users,
@@ -79,9 +86,19 @@ class UserController extends Controller
         User::create(
             [
                 'fname' => $request['fname'],
+                'mname' => $request['mname'],
                 'lname' => $request['lname'],
                 'email' => $request['email'],
-                'password' => $encrypted_password
+                'password' => $encrypted_password,
+                'birthday' => $request['birthday'],
+                'age' => $request['age'],
+                'phone1' => $request['phone1'],
+                'phone2' => $request['phone2'],
+                'purok' => $request['purok'],
+                'barangay' => $request['barangay'],
+                'city' => $request['city'],
+                'province' => $request['province'],
+                'zip_code' => $request['zip_code'],
             ]
         );
 
@@ -138,5 +155,64 @@ class UserController extends Controller
     public function destroy(string $id)
     {
         //
+    }
+
+    /**
+     * Get all provinces
+     */
+    public function getProvinces()
+    {
+        $provinces = DB::table('address_provinces')
+            ->select('id', 'name')
+            ->distinct()
+            ->orderBy('name')
+            ->get();
+        
+        return response()->json($provinces);
+    }
+
+    /**
+     * Get cities by province
+     */
+    public function getCities($province)
+    {
+        $cities = DB::table('address_cities')
+            ->where('province_id', $province)
+            ->select('id', 'name', 'zip_code')
+            ->distinct()
+            ->orderBy('name')
+            ->get();
+        
+        return response()->json($cities);
+    }
+
+    /**
+     * Get barangays by city
+     */
+    public function getBarangays($city)
+    {
+        $barangays = DB::table('address_barangays')
+            ->where('city_id', $city)
+            ->select('id', 'name')
+            ->distinct()
+            ->orderBy('name')
+            ->get();
+        
+        return response()->json($barangays);
+    }
+
+    /**
+     * Get puroks by barangay
+     */
+    public function getPuroks($barangay)
+    {
+        $puroks = DB::table('address_puroks')
+            ->where('barangay_id', $barangay)
+            ->select('id', 'name')
+            ->distinct()
+            ->orderBy('name')
+            ->get();
+        
+        return response()->json($puroks);
     }
 }
