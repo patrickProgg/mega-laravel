@@ -82,8 +82,9 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $encrypted_password = Hash::make($request['password']);
- 
-        User::create(
+        
+        // Create the household head
+        $householdHead = User::create(
             [
                 'fname' => $request['fname'],
                 'mname' => $request['mname'],
@@ -99,11 +100,35 @@ class UserController extends Controller
                 'city' => $request['city'],
                 'province' => $request['province'],
                 'zip_code' => $request['zip_code'],
+                'status' => $request['status'] ?? 0, // Default to active if not provided
             ]
         );
-
+        
+        // Store family members if any
+        if ($request->has('family_members') && is_array($request->family_members)) {
+            foreach ($request->family_members as $familyMember) {
+                User_ln::create([
+                    'hd_id' => $householdHead->hd_id, // Foreign key to user_hd table
+                    'fname' => $familyMember['fname'] ?? null,
+                    'mname' => $familyMember['mname'] ?? null,
+                    'lname' => $familyMember['lname'] ?? null,
+                    'birthday' => $familyMember['birthday'] ?? null,
+                    'age' => $familyMember['age'] ?? null,
+                    'phone1' => $familyMember['phone1'] ?? null,
+                    'phone2' => $familyMember['phone2'] ?? null,
+                    'relation' => $familyMember['relation'] ?? null,
+                    'purok' => $familyMember['purok'] ?? null,
+                    'barangay' => $familyMember['barangay'] ?? null,
+                    'city' => $familyMember['city'] ?? null,
+                    'province' => $familyMember['province'] ?? null,
+                    'zip_code' => $familyMember['zip_code'] ?? null,
+                    'status' => 0, // Default status
+                ]);
+            }
+        }
+        
         return redirect()->back();
-    } 
+    }
 
     /**
      * Display the specified resource.
@@ -128,24 +153,51 @@ class UserController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, User $user)
-    {   
-        $data = $request->validate([
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'password' => 'nullable',
-            'fname' => 'string',
-            'lname' => 'string',
-            'status' => 'nullable|integer',
+    public function update(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        
+        $user->update([
+            'fname' => $request['fname'],
+            'mname' => $request['mname'],
+            'lname' => $request['lname'],
+            'email' => $request['email'],
+            'birthday' => $request['birthday'],
+            'age' => $request['age'],
+            'phone1' => $request['phone1'],
+            'phone2' => $request['phone2'],
+            'purok' => $request['purok'],
+            'barangay' => $request['barangay'],
+            'city' => $request['city'],
+            'province' => $request['province'],
+            'zip_code' => $request['zip_code'],
+            'status' => $request['status'] ?? $user->status,
         ]);
-
-        if (!empty($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
-        } else {
-            unset($data['password']);
-        }
-
-        $user->update($data);
-
+        
+        // // Update or add family members
+        // if ($request->has('family_members') && is_array($request->family_members)) {
+        //     // Option 1: Delete all existing and create new ones
+        //     User_ln::where('hd_id', $id)->delete();
+            
+        //     foreach ($request->family_members as $familyMember) {
+        //         User_ln::create([
+        //             'hd_id' => $id,
+        //             'fname' => $familyMember['fname'] ?? null,
+        //             'mname' => $familyMember['mname'] ?? null,
+        //             'lname' => $familyMember['lname'] ?? null,
+        //             'birthday' => $familyMember['birthday'] ?? null,
+        //             'age' => $familyMember['age'] ?? null,
+        //             'phone1' => $familyMember['phone1'] ?? null,
+        //             'phone2' => $familyMember['phone2'] ?? null,
+        //             'relation' => $familyMember['relation'] ?? null,
+        //             'status' => $familyMember['status'] ?? 0,
+        //         ]);
+        //     }
+            
+        //     // Option 2: Update existing and create new (if you have IDs)
+        //     // This is more complex and requires sending member IDs from frontend
+        // }
+        
         return redirect()->back();
     }
 

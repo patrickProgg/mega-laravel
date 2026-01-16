@@ -36,6 +36,14 @@
     font-size: 13px !important;
     color: #bfbfbf !important;
 }
+
+/* For Ant Design Divider inner text */
+.ant-divider-inner-text {
+    font-style: italic;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1890ff;
+}
 </style>
 
 <script setup>
@@ -59,12 +67,18 @@ const currentPage = ref(users.value.current_page || 1);
 const memberPerPage = ref(5);
 const memberCurrentPage = ref(1);
 
+// New state for managing family members
+const showAddFamilySection = ref(false);
+const familyMembers = ref([]); // Array to store multiple family members
+const currentFamilyMember = ref({}); // Current family member being edited
+
 // Address dropdown options
 const provinces = ref([]);
 const cities = ref([]);
 const barangays = ref([]);
 const puroks = ref([]);
 
+// Main form for household head
 const form = ref({
     email: "",
     password: "",
@@ -82,6 +96,24 @@ const form = ref({
     zip_code: "",
     status: "",
 });
+
+// Initial family member template
+const initialFamilyMember = {
+    fname: "",
+    mname: "",
+    lname: "",
+    birthday: "",
+    age: "",
+    phone1: "",
+    phone2: "",
+    relation: "",
+    province: "",
+    city: "",
+    barangay: "",
+    purok: "",
+    zip_code: "",
+    key: Date.now(),
+};
 
 // Load provinces on mount
 watch(showModal, async (isOpen) => {
@@ -116,13 +148,10 @@ async function loadCities(provinceId) {
 // Auto-populate zip code when city is selected
 function handleCityChange(cityId) {
     const selectedCity = cities.value.find((c) => c.id === cityId);
-    console.log("Selected city:", selectedCity);
     if (selectedCity && selectedCity.zip_code) {
         form.value.zip_code = selectedCity.zip_code;
-        console.log("Zip code set to:", form.value.zip_code);
     } else {
         form.value.zip_code = "";
-        console.log("No zip code found");
     }
 }
 
@@ -181,6 +210,9 @@ function fetchUsers(pageNumber = currentPage.value) {
 function openAddModal() {
     editingUser.value = null;
     resetForm();
+    showAddFamilySection.value = false;
+    familyMembers.value = [];
+    currentFamilyMember.value = { ...initialFamilyMember, key: Date.now() };
     showModal.value = true;
 }
 
@@ -203,6 +235,10 @@ function openEditModal(user) {
     form.value.zip_code = user.zip_code;
     form.value.status = user.status;
 
+    showAddFamilySection.value = false;
+    familyMembers.value = [];
+    currentFamilyMember.value = { ...initialFamilyMember, key: Date.now() };
+
     // Load cascading dropdowns
     if (user.province) {
         loadCities(user.province);
@@ -218,8 +254,26 @@ function openEditModal(user) {
 }
 
 function saveUser() {
+    console.log(
+        "Saving user with data:",
+        form.value,
+        "and family members:",
+        familyMembers.value
+    );
+
+    if (!form.value.fname) {
+        message.error("Please fill in all required fields");
+        return;
+    }
+
+    // Prepare data including family members
+    const dataToSend = {
+        ...form.value,
+        family_members: familyMembers.value,
+    };
+
     if (editingUser.value) {
-        router.put(`/user/${editingUser.value.hd_id}`, form.value, {
+        router.put(`/user/${editingUser.value.hd_id}`, dataToSend, {
             onSuccess: (page) => {
                 users.value = page.props.users;
                 resetForm();
@@ -227,7 +281,7 @@ function saveUser() {
             },
         });
     } else {
-        router.post("/user", form.value, {
+        router.post("/user", dataToSend, {
             onSuccess: (page) => {
                 users.value = page.props.users;
                 resetForm();
@@ -248,10 +302,122 @@ function resetForm() {
     };
     editingUser.value = null;
     showModal.value = false;
+    showAddFamilySection.value = false;
+    familyMembers.value = [];
+    currentFamilyMember.value = { ...initialFamilyMember, key: Date.now() };
 }
 
 function closeModal() {
     resetForm();
+}
+
+// Toggle the add family section
+// function toggleAddFamilySection() {
+//     showAddFamilySection.value = !showAddFamilySection.value;
+//     if (showAddFamilySection.value) {
+//         // Reset current family member when opening the section
+//         currentFamilyMember.value = { ...initialFamilyMember, key: Date.now() };
+//     }
+// }
+
+// Toggle the add family section
+function toggleAddFamilySection() {
+    showAddFamilySection.value = !showAddFamilySection.value;
+    if (showAddFamilySection.value) {
+        // Reset current family member when opening the section
+        // AND automatically pre-fill with parent's address
+        currentFamilyMember.value = {
+            ...initialFamilyMember,
+            key: Date.now(),
+            // AUTO-FILL with parent's address
+            province: form.value.province,
+            city: form.value.city,
+            barangay: form.value.barangay,
+            purok: form.value.purok,
+            zip_code: form.value.zip_code,
+        };
+
+        // Also load the cascading dropdowns for the pre-filled values
+        if (form.value.province) {
+            loadCities(form.value.province);
+        }
+        if (form.value.city) {
+            loadBarangays(form.value.city);
+        }
+        if (form.value.barangay) {
+            loadPuroks(form.value.barangay);
+        }
+    }
+}
+
+// Save current family member to the list
+function addFamilyMember() {
+    if (!currentFamilyMember.value.fname) {
+        message.error("Please fill in family member's first name");
+        return;
+    }
+
+    // Add the current family member to the list
+    familyMembers.value.push({
+        ...currentFamilyMember.value,
+        key: Date.now() + Math.random(),
+    });
+
+    // Reset current family member and pre-fill with parent's address
+    currentFamilyMember.value = {
+        ...initialFamilyMember,
+        key: Date.now(),
+        // Always pre-fill with parent's current address
+        province: form.value.province,
+        city: form.value.city,
+        barangay: form.value.barangay,
+        purok: form.value.purok,
+        zip_code: form.value.zip_code
+    };
+
+    message.success("Family member added successfully");
+}
+
+// Remove a family member from the list
+function removeFamilyMember(index) {
+    familyMembers.value.splice(index, 1);
+    message.success("Family member removed");
+}
+
+// Watch for birthday changes in both forms
+watch(
+    () => form.value.birthday,
+    (newBirthday) => {
+        if (newBirthday) {
+            form.value.age = calculateAge(newBirthday);
+        } else {
+            form.value.age = "";
+        }
+    }
+);
+
+watch(
+    () => currentFamilyMember.value.birthday,
+    (newBirthday) => {
+        if (newBirthday) {
+            currentFamilyMember.value.age = calculateAge(newBirthday);
+        } else {
+            currentFamilyMember.value.age = "";
+        }
+    }
+);
+
+// Helper function to calculate age from birthday string
+function calculateAge(birthday) {
+    const birthDate = new Date(birthday);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
 }
 
 const dataSource = computed(() =>
@@ -497,30 +663,6 @@ watch(showViewModal, (open) => {
 function openAddMember() {
     showAddMemberModal.value = true;
 }
-
-watch(
-    () => form.value.birthday,
-    (newBirthday) => {
-        if (newBirthday) {
-            form.value.age = calculateAge(newBirthday);
-        } else {
-            form.value.age = "";
-        }
-    }
-);
-
-// Helper function to calculate age from birthday string
-function calculateAge(birthday) {
-    const birthDate = new Date(birthday);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const m = today.getMonth() - birthDate.getMonth();
-
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-    }
-    return age;
-}
 </script>
 
 <template>
@@ -573,15 +715,22 @@ function calculateAge(birthday) {
                 layout="vertical"
                 @submit.prevent="saveUser"
             >
-                <a-divider orientation="left" style="color: #1890ff"
-                    >Personal Information</a-divider
-                >
+                <a-divider orientation="left">Personal Information</a-divider>
                 <a-row :gutter="16">
                     <a-col :xs="24" :sm="12">
                         <a-form-item
                             label="First Name"
                             name="fname"
-                            :rules="[{ required: true, message: 'Please input first name!' }]"
+                            :rules="
+                                editingUser
+                                    ? []
+                                    : [
+                                          {
+                                              required: true,
+                                              message: 'Please input first name!',
+                                          },
+                                      ]
+                            "
                         >
                             <a-input
                                 :value="form.fname"
@@ -692,7 +841,7 @@ function calculateAge(birthday) {
                     </a-col>
                 </a-row>
 
-                <a-divider orientation="left" style="color: #1890ff">Address</a-divider>
+                <a-divider orientation="left">Address</a-divider>
 
                 <a-row :gutter="16">
                     <a-col :xs="24" :sm="12">
@@ -716,7 +865,7 @@ function calculateAge(birthday) {
                                 <a-select-option
                                     v-for="province in provinces"
                                     :key="province.id"
-                                    :value="province.id"
+                                    :value="form.province"
                                 >
                                     {{ province.name }}
                                 </a-select-option>
@@ -746,7 +895,7 @@ function calculateAge(birthday) {
                                 <a-select-option
                                     v-for="city in cities"
                                     :key="city.id"
-                                    :value="city.id"
+                                    :value="form.city"
                                 >
                                     {{ city.name }}
                                     {{ city.zip_code ? `(${city.zip_code})` : "" }}
@@ -777,7 +926,7 @@ function calculateAge(birthday) {
                                 <a-select-option
                                     v-for="barangay in barangays"
                                     :key="barangay.id"
-                                    :value="barangay.id"
+                                    :value="form.barangay"
                                 >
                                     {{ barangay.name }}
                                 </a-select-option>
@@ -798,7 +947,7 @@ function calculateAge(birthday) {
                                 <a-select-option
                                     v-for="purok in puroks"
                                     :key="purok.id"
-                                    :value="purok.id"
+                                    :value="form.purok"
                                 >
                                     {{ purok.name }}
                                 </a-select-option>
@@ -820,9 +969,7 @@ function calculateAge(birthday) {
                     </a-col>
                 </a-row>
 
-                <a-divider v-if="editingUser" orientation="left" style="color: #1890ff"
-                    >Status</a-divider
-                >
+                <a-divider v-if="editingUser" orientation="left">Status</a-divider>
 
                 <a-row :gutter="16">
                     <a-col :xs="24" :sm="5">
@@ -838,13 +985,372 @@ function calculateAge(birthday) {
                         </a-form-item>
                     </a-col>
                 </a-row>
+
+                <!-- Add Family Section Toggle -->
+                <div v-if="!editingUser" class="mt-4">
+                    <a-button
+                        type="dashed"
+                        @click="toggleAddFamilySection"
+                        class="w-full"
+                    >
+                        <span v-if="!showAddFamilySection">+ Add Family Member</span>
+                        <span v-else>- Hide Family Member Form</span>
+                    </a-button>
+                </div>
+
+                <!-- Family Member Form Section -->
+                <div v-if="!editingUser && showAddFamilySection" class="mt-6">
+                    <a-divider orientation="left">Add Family Member</a-divider>
+
+                    <a-form layout="vertical">
+                        <a-row :gutter="16">
+                            <a-col :xs="24" :sm="12">
+                                <a-form-item
+                                    label="First Name"
+                                    :rules="[
+                                        {
+                                            required: true,
+                                            message:
+                                                'Please input family member first name!',
+                                        },
+                                    ]"
+                                >
+                                    <a-input
+                                        v-model:value="currentFamilyMember.fname"
+                                        placeholder="First Name"
+                                        @input="
+                                            currentFamilyMember.fname =
+                                                $event.target.value
+                                                    .charAt(0)
+                                                    .toUpperCase() +
+                                                $event.target.value.slice(1)
+                                        "
+                                    />
+                                </a-form-item>
+                            </a-col>
+                            <a-col :xs="24" :sm="12">
+                                <a-form-item label="Middle Name">
+                                    <a-input
+                                        v-model:value="currentFamilyMember.mname"
+                                        placeholder="Middle Name"
+                                        @input="
+                                            currentFamilyMember.mname =
+                                                $event.target.value
+                                                    .charAt(0)
+                                                    .toUpperCase() +
+                                                $event.target.value.slice(1)
+                                        "
+                                    />
+                                </a-form-item>
+                            </a-col>
+                        </a-row>
+
+                        <a-row :gutter="16">
+                            <a-col :xs="24" :sm="16">
+                                <a-form-item
+                                    label="Last Name"
+                                    :rules="[
+                                        {
+                                            required: true,
+                                            message:
+                                                'Please input family member last name!',
+                                        },
+                                    ]"
+                                >
+                                    <a-input
+                                        v-model:value="currentFamilyMember.lname"
+                                        placeholder="Last Name"
+                                        @input="
+                                            currentFamilyMember.lname =
+                                                $event.target.value
+                                                    .charAt(0)
+                                                    .toUpperCase() +
+                                                $event.target.value.slice(1)
+                                        "
+                                    />
+                                </a-form-item>
+                            </a-col>
+
+                            <a-col :xs="24" :sm="5">
+                                <a-form-item label="Birthday">
+                                    <a-input
+                                        v-model:value="currentFamilyMember.birthday"
+                                        placeholder="Birthday"
+                                        type="date"
+                                    />
+                                </a-form-item>
+                            </a-col>
+
+                            <a-col :xs="24" :sm="3">
+                                <a-form-item label="Age">
+                                    <a-input
+                                        v-model:value="currentFamilyMember.age"
+                                        placeholder="Age"
+                                        disabled
+                                    />
+                                </a-form-item>
+                            </a-col>
+                        </a-row>
+
+                        <a-row :gutter="16">
+                            <a-col :xs="24" :sm="8">
+                                <a-form-item
+                                    label="Relation"
+                                    :rules="[
+                                        {
+                                            required: true,
+                                            message:
+                                                'Please select relation to household head!',
+                                        },
+                                    ]"
+                                >
+                                    <a-select
+                                        v-model:value="currentFamilyMember.relation"
+                                        placeholder="Select Relation"
+                                    >
+                                        <a-select-option value="spouse"
+                                            >Spouse</a-select-option
+                                        >
+                                        <a-select-option value="child"
+                                            >Child</a-select-option
+                                        >
+                                        <a-select-option value="parent"
+                                            >Parent</a-select-option
+                                        >
+                                        <a-select-option value="sibling"
+                                            >Sibling</a-select-option
+                                        >
+                                        <a-select-option value="other"
+                                            >Other</a-select-option
+                                        >
+                                    </a-select>
+                                </a-form-item>
+                            </a-col>
+                            <a-col :xs="24" :sm="8">
+                                <a-form-item label="Contact #">
+                                    <a-input
+                                        v-model:value="currentFamilyMember.phone1"
+                                        placeholder="Contact Number"
+                                        type="tel"
+                                        @input="
+                                            currentFamilyMember.phone1 = $event.target.value.slice(
+                                                0,
+                                                11
+                                            )
+                                        "
+                                    />
+                                </a-form-item>
+                            </a-col>
+                            <a-col :xs="24" :sm="8">
+                                <a-form-item label="Alt Contact #">
+                                    <a-input
+                                        v-model:value="currentFamilyMember.phone2"
+                                        placeholder="Alternative Contact"
+                                        type="tel"
+                                        @input="
+                                            currentFamilyMember.phone2 = $event.target.value.slice(
+                                                0,
+                                                11
+                                            )
+                                        "
+                                    />
+                                </a-form-item>
+                            </a-col>
+                        </a-row>
+                        <a-row :gutter="16">
+                            <a-col :xs="24" :sm="12">
+                                <a-form-item
+                                    label="Province"
+                                    name="province"
+                                    :rules="[{ message: 'Please select province!' }]"
+                                >
+                                    <a-select
+                                        v-model:value="currentFamilyMember.province"
+                                        placeholder="Select Province"
+                                        @change="
+                                            (value) => {
+                                                currentFamilyMember.city = undefined;
+                                                currentFamilyMember.barangay = undefined;
+                                                currentFamilyMember.purok = undefined;
+                                                currentFamilyMember.zip_code = ''; // Clear zip code when province changes
+                                                loadCities(value);
+                                            }
+                                        "
+                                    >
+                                        <a-select-option
+                                            v-for="province in provinces"
+                                            :key="province.id"
+                                            :value="province.id"
+                                        >
+                                            {{ province.name }}
+                                        </a-select-option>
+                                    </a-select>
+                                </a-form-item>
+                            </a-col>
+                            <a-col :xs="24" :sm="12">
+                                <a-form-item
+                                    label="City"
+                                    name="city"
+                                    :rules="[{ message: 'Please select city!' }]"
+                                >
+                                    <a-select
+                                        v-model:value="currentFamilyMember.city"
+                                        placeholder="Select City"
+                                        :disabled="!currentFamilyMember.province"
+                                        @change="
+                                            (value) => {
+                                                currentFamilyMember.barangay = undefined;
+                                                currentFamilyMember.purok = undefined;
+
+                                                // Simple: Find the selected city and get its zip code
+                                                const selectedCity = cities.find(
+                                                    (c) => c.id === value
+                                                );
+                                                currentFamilyMember.zip_code = selectedCity
+                                                    ? selectedCity.zip_code
+                                                    : '';
+
+                                                loadBarangays(value);
+                                            }
+                                        "
+                                    >
+                                        <a-select-option
+                                            v-for="city in cities"
+                                            :key="city.id"
+                                            :value="city.id"
+                                        >
+                                            {{ city.name }}
+                                            {{
+                                                city.zip_code ? `(${city.zip_code})` : ""
+                                            }}
+                                        </a-select-option>
+                                    </a-select>
+                                </a-form-item>
+                            </a-col>
+                        </a-row>
+
+                        <a-row :gutter="16">
+                            <a-col :xs="24" :sm="16">
+                                <a-form-item
+                                    label="Barangay"
+                                    name="barangay"
+                                    :rules="[{ message: 'Please select barangay!' }]"
+                                >
+                                    <a-select
+                                        v-model:value="currentFamilyMember.barangay"
+                                        placeholder="Select Barangay"
+                                        :disabled="!currentFamilyMember.city"
+                                        @change="
+                                            (value) => {
+                                                currentFamilyMember.purok = undefined;
+                                                loadPuroks(value);
+                                            }
+                                        "
+                                    >
+                                        <a-select-option
+                                            v-for="barangay in barangays"
+                                            :key="barangay.id"
+                                            :value="barangay.id"
+                                        >
+                                            {{ barangay.name }}
+                                        </a-select-option>
+                                    </a-select>
+                                </a-form-item>
+                            </a-col>
+                            <a-col :xs="24" :sm="5">
+                                <a-form-item
+                                    label="Purok"
+                                    name="purok"
+                                    :rules="[{ message: 'Please select purok!' }]"
+                                >
+                                    <a-select
+                                        v-model:value="currentFamilyMember.purok"
+                                        placeholder="Select Purok"
+                                        :disabled="!currentFamilyMember.barangay"
+                                    >
+                                        <a-select-option
+                                            v-for="purok in puroks"
+                                            :key="purok.id"
+                                            :value="purok.id"
+                                        >
+                                            {{ purok.name }}
+                                        </a-select-option>
+                                    </a-select>
+                                </a-form-item>
+                            </a-col>
+                            <a-col :xs="24" :sm="3">
+                                <a-form-item
+                                    label="Zip Code"
+                                    name="zip_code"
+                                    :rules="[{ message: 'Please input zip code!' }]"
+                                >
+                                    <a-input
+                                        v-model:value="currentFamilyMember.zip_code"
+                                        placeholder="Zip Code"
+                                        disabled
+                                    />
+                                </a-form-item>
+                            </a-col>
+                        </a-row>
+
+                        <div class="flex justify-end mt-4">
+                            <a-button type="primary" @click="addFamilyMember">
+                                Add to Family List
+                            </a-button>
+                        </div>
+                    </a-form>
+                </div>
+
+                <div v-if="familyMembers.length > 0" class="mt-6">
+                    <a-divider orientation="left"
+                        >Family Members ({{ familyMembers.length }})</a-divider
+                    >
+                    <div class="max-h-60 overflow-y-auto">
+                        <div
+                            v-for="(member, index) in familyMembers"
+                            :key="member.key"
+                            class="mb-3 p-3 border border-gray-200 rounded-lg bg-gray-50"
+                        >
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <strong
+                                        >{{ member.fname }}
+                                        {{ member.mname ? member.mname + " " : ""
+                                        }}{{ member.lname }}</strong
+                                    >
+                                    <div class="text-sm text-gray-600">
+                                        Relation: {{ member.relation }} | Age:
+                                        {{ member.age || "N/A" }} | Phone:
+                                        {{ member.phone1 || "N/A" }}
+                                    </div>
+                                </div>
+                                <a-button
+                                    type="text"
+                                    danger
+                                    @click="removeFamilyMember(index)"
+                                    class="ml-2"
+                                >
+                                    Remove
+                                </a-button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </a-form>
 
             <template #footer>
-                <a-button danger @click="closeModal">Close</a-button>
-                <a-button type="primary" @click="saveUser">
-                    {{ editingUser ? "Update" : "Add" }}
-                </a-button>
+                <div class="flex justify-end items-center space-x-2">
+                    <div
+                        v-if="familyMembers.length > 0"
+                        class="text-sm text-gray-600 mr-auto"
+                    >
+                        Family Members: {{ familyMembers.length }}
+                    </div>
+                    <a-button danger @click="closeModal">Close</a-button>
+                    <a-button type="primary" @click="saveUser">
+                        {{ editingUser ? "Update" : "Add" }}
+                    </a-button>
+                </div>
             </template>
         </a-modal>
 
